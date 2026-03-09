@@ -25,6 +25,14 @@ It includes measurements of:
 
 Missing values in the dataset were originally encoded as **-200**.
 
+
+## Dataset
+
+Air Quality Dataset (Kaggle)
+
+https://www.kaggle.com/datasets/fedesoriano/air-quality-data-set
+
+
 ---
 
 ## Data Preprocessing
