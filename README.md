@@ -1,141 +1,35 @@
-# Air Quality Prediction using Machine Learning
+# Air Quality ML — CO Concentration Estimation
 
-## Project Overview
+Estimate **carbon monoxide (CO) concentration** from same-hour environmental and gas sensor measurements. This is a *contemporaneous estimation* problem; it is **not a forecast of future pollution levels**.
 
-This project applies Machine Learning techniques to predict Carbon Monoxide (CO) concentration using environmental sensor data from an air quality monitoring dataset.
+## Data
+The included [AirQuality.csv](AirQuality.csv) contains 9,357 hourly records from March 2004 to April 2005. Source: [UCI Air Quality dataset](https://archive.ics.uci.edu/dataset/360/air+quality) (also mirrored on [Kaggle](https://www.kaggle.com/datasets/fedesoriano/air-quality-data-set)). Values are historical and geographically specific, not representative of current Saudi air quality.
 
-The goal is to investigate how sensor measurements and environmental conditions can be used to estimate air pollution levels.
+Dates are parsed as day/month/year; decimal commas are converted; empty entries and `-200` are interpreted as missing. Rows without a CO target are excluded. Missing **features** are imputed using medians learned only from training folds.
 
----
+## Reproducible evaluation (new)
 
-## Dataset
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python train.py
+pytest -q
+```
 
-The dataset contains hourly averaged responses from an array of chemical sensors deployed in a polluted urban area.
+`train.py` sorts readings chronologically, reserves the **last 20%** of labeled observations as an untouched holdout, and compares a median dummy baseline, Ridge, Random Forest, and Histogram Gradient Boosting on training-only expanding-window `TimeSeriesSplit` cross-validation. Pipelines prevent preprocessing from learning the validation or test distribution. The model with lowest mean CV RMSE is refitted on all training data and evaluated once on the holdout.
 
-It includes measurements of:
+Results are written locally to `artifacts/cv_comparison.csv`, `artifacts/metrics.json`, and `artifacts/best_pipeline.joblib`. Generated artifacts are ignored by Git. This repository does **not** claim new holdout scores until they have been reproduced by running the workflow.
 
-- Carbon Monoxide (CO)
-- Benzene (C6H6)
-- Nitrogen Oxides (NOx)
-- Nitrogen Dioxide (NO2)
-- Sensor responses
-- Temperature
-- Relative Humidity
-- Absolute Humidity
+**Caveats:** Time-aware evaluation can reveal weaker performance under distribution shift; chronological folds are not a substitute for independent data from other sensors/locations. Same-hour chemical measurements may not be available to a real-world inference system, so deployment requires a clearly specified sensor input contract. This dataset is not appropriate for estimating future values without a different problem formulation, lagged features and a forecast horizon.
 
-Missing values in the dataset were originally encoded as **-200**.
+## Legacy experiment
+The [original script](airQuality_project.py) uses random train/test splitting, drops incomplete rows and compares Linear Regression with Random Forest. Its README originally reported 0.239/0.219 MSE and 0.88/0.89 R² respectively; these are **legacy random-split results** and are not directly comparable to the new time-aware experiment. The original visualizations remain in [results/](results/), including [actual versus predicted](results/actual_vs_predicted.png), [correlation matrix](results/correlation_matrix.png), and [feature importance](results/feature_importance.png).
 
+## Possible next experiments
+- Evaluate alternative feature subsets based on which sensors would be available at inference time.
+- Measure monthly/seasonal drift and report results for multiple chronological holdout windows.
+- Develop a **separate** next-hour forecasting task using lagged features and a strict prediction horizon.
 
-## Dataset
-
-Air Quality Dataset (Kaggle)
-
-https://www.kaggle.com/datasets/fedesoriano/air-quality-data-set
-
-
----
-
-## Data Preprocessing
-
-The following preprocessing steps were applied:
-
-- Removed unnecessary columns
-- Replaced decimal commas with decimal points
-- Converted numerical columns to numeric format
-- Removed missing values
-- Split features and target variable
-- Standardized feature values using **StandardScaler**
-
----
-
-## Exploratory Data Analysis
-
-A correlation analysis was performed to understand relationships between variables.
-
-### Correlation Matrix
-
-![Correlation Matrix](results/correlation_matrix.png)
-
-The analysis showed strong correlations between several sensor readings and CO concentration.
-
----
-
-## Machine Learning Models
-
-Two regression models were implemented:
-
-1. **Linear Regression**
-2. **Random Forest Regressor**
-
-The dataset was split into:
-
-- **80% training data**
-- **20% testing data**
-
----
-
-## Model Evaluation
-
-The models were evaluated using:
-
-- Mean Squared Error (MSE)
-- R² Score
-
-| Model | MSE | R² |
-|------|------|------|
-Linear Regression | 0.239 | 0.88 |
-Random Forest | 0.219 | 0.89 |
-
-Random Forest slightly outperformed Linear Regression.
-
----
-
-## Prediction Visualization
-
-Actual vs predicted CO values:
-
-![Prediction vs Actual](results/prediction_vs_actual.png)
-
-The predictions closely follow the actual values, indicating good model performance.
-
----
-
-## Feature Importance
-
-Feature importance analysis using Random Forest shows which variables contribute most to CO prediction.
-
-![Feature Importance](results/feature_importance.png)
-
-The **PT08.S2 (NMHC) sensor** was found to be the most influential feature.
-
----
-
-## Conclusion
-
-This project demonstrates that environmental sensor data can be effectively used to predict air pollution levels using Machine Learning.
-
-Random Forest provided slightly better performance compared to Linear Regression.
-
----
-
-## Technologies Used
-
-- Python
-- Pandas
-- NumPy
-- Scikit-learn
-- Matplotlib
-- Seaborn
-
----
-
-## Future Improvements
-
-Possible improvements include:
-
-- Testing additional models (Gradient Boosting, XGBoost)
-- Hyperparameter tuning
-- Time-series analysis using the timestamp information
-- Deploying the model as an API
-
----
+## Stack
+Python, pandas, NumPy, scikit-learn, Matplotlib, seaborn, pytest.
